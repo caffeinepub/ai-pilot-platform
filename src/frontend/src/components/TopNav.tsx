@@ -1,11 +1,10 @@
-import { Plane } from "lucide-react";
+import { MessageSquare, Plane, Radar, Radio } from "lucide-react";
 
 const TABS = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "flightplan", label: "Flight Plan" },
-  { id: "missions", label: "Missions" },
-  { id: "systems", label: "Systems" },
-  { id: "logs", label: "Logs" },
+  { id: "dashboard", label: "Dashboard", icon: null },
+  { id: "comms", label: "Comms", icon: Radio },
+  { id: "phase-chat", label: "Phase Chat", icon: MessageSquare },
+  { id: "radar", label: "Radar", icon: Radar },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -43,13 +42,14 @@ export default function TopNav({ activeTab, onTabChange }: TopNavProps) {
       <nav className="flex items-center gap-1">
         {TABS.map((tab) => {
           const active = activeTab === tab.id;
+          const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               type="button"
               data-ocid="nav.tab"
               onClick={() => onTabChange(tab.id as TabId)}
-              className="px-3 py-1 rounded text-xs font-medium tracking-wide transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium tracking-wide transition-colors"
               style={{
                 color: active ? "oklch(82% 0.155 78)" : "oklch(57% 0.015 215)",
                 background: active
@@ -60,6 +60,7 @@ export default function TopNav({ activeTab, onTabChange }: TopNavProps) {
                   : "2px solid transparent",
               }}
             >
+              {Icon && <Icon size={11} />}
               {tab.label}
             </button>
           );

@@ -89,16 +89,9 @@ export default function CircularGauge({
   const level = alertLevelProp ?? computeLevel(clampedVal, zones);
   const color = arcColor(level);
 
-  const glowClass =
-    level === "CRITICAL"
-      ? "gauge-glow-red animate-pulse-critical"
-      : level === "CAUTION"
-        ? "gauge-glow-amber"
-        : "gauge-glow-green";
-
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className={`relative ${glowClass}`}>
+      <div className="relative">
         <svg
           viewBox="0 0 120 120"
           width="110"

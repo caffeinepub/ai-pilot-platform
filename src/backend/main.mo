@@ -3,12 +3,13 @@ import Map "mo:core/Map";
 import Runtime "mo:core/Runtime";
 import Array "mo:core/Array";
 import Time "mo:core/Time";
+import Principal "mo:core/Principal";
 
 actor {
   type LogEntry = {
     id : Nat;
     timestamp : Int;
-    role : Text; // "pilot" or "ai"
+    role : Text;
     message : Text;
     flightPhase : Text;
   };
@@ -28,6 +29,14 @@ actor {
     phase : Text;
   };
 
+  public type PilotMessage = {
+    id : Nat;
+    timestamp : Int;
+    fromCallsign : Text;
+    toCallsign : Text; // "BROADCAST" or specific callsign
+    content : Text;
+  };
+
   module FlightSessionSummary {
     public func fromFlightSession(session : FlightSession) : FlightSessionSummary {
       {
@@ -41,9 +50,12 @@ actor {
 
   var nextSessionId = 1;
   var nextLogEntryId = 1;
+  var nextMessageId = 1;
   var currentSessionId : ?Nat = null;
 
   let sessions = Map.empty<Nat, FlightSession>();
+  let callsigns = Map.empty<Principal, Text>();
+  let pilotMessages = Map.empty<Nat, PilotMessage>();
 
   public shared ({ caller }) func startFlightSession(destination : Text, phase : Text) : async Nat {
     let sessionId = nextSessionId;
@@ -59,7 +71,6 @@ actor {
 
     sessions.add(sessionId, newSession);
     currentSessionId := ?sessionId;
-
     sessionId;
   };
 
@@ -125,5 +136,70 @@ actor {
         sessions.add(sessionId, updatedSession);
       };
     };
+  };
+
+  // ── P2P Pilot Communication ──────────────────────────
+
+  public shared ({ caller }) func registerCallsign(callsign : Text) : async () {
+    callsigns.add(caller, callsign);
+  };
+
+  public query ({ caller }) func getCallsign() : async ?Text {
+    callsigns.get(caller);
+  };
+
+  public query func getOnlinePilots() : async [Text] {
+    callsigns.values().toArray();
+  };
+
+  public shared ({ caller }) func sendBroadcast(content : Text) : async Nat {
+    switch (callsigns.get(caller)) {
+      case (null) { Runtime.trap("Register a callsign first") };
+      case (?fromCallsign) {
+        let msgId = nextMessageId;
+        nextMessageId += 1;
+        let msg : PilotMessage = {
+          id = msgId;
+          timestamp = Time.now();
+          fromCallsign;
+          toCallsign = "BROADCAST";
+          content;
+        };
+        pilotMessages.add(msgId, msg);
+        msgId;
+      };
+    };
+  };
+
+  public shared ({ caller }) func sendDirectMessage(toCallsign : Text, content : Text) : async Nat {
+    switch (callsigns.get(caller)) {
+      case (null) { Runtime.trap("Register a callsign first") };
+      case (?fromCallsign) {
+        let msgId = nextMessageId;
+        nextMessageId += 1;
+        let msg : PilotMessage = {
+          id = msgId;
+          timestamp = Time.now();
+          fromCallsign;
+          toCallsign;
+          content;
+        };
+        pilotMessages.add(msgId, msg);
+        msgId;
+      };
+    };
+  };
+
+  public query ({ caller }) func getMessages() : async [PilotMessage] {
+    let myCallsign = callsigns.get(caller);
+    pilotMessages.values().toArray().filter(func(msg : PilotMessage) : Bool {
+      if (msg.toCallsign == "BROADCAST") return true;
+      switch (myCallsign) {
+        case (null) { false };
+        case (?cs) {
+          msg.fromCallsign == cs or msg.toCallsign == cs;
+        };
+      };
+    });
   };
 };

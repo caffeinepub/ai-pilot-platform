@@ -58,13 +58,10 @@ function BarIndicator({
         style={{ background: "oklch(18% 0.020 225)" }}
       >
         <div
-          className={`h-full rounded-full transition-all ${
-            alertLevel === "CRITICAL" ? "animate-pulse-critical" : ""
-          }`}
+          className="h-full rounded-full transition-all"
           style={{
             width: `${pct}%`,
             background: barColor,
-            boxShadow: `0 0 6px ${barColor}80`,
           }}
         />
       </div>
@@ -149,10 +146,7 @@ export default function FlightGauges({
     >
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div
-          className="w-2 h-2 rounded-full"
-          style={{ background: AMBER, boxShadow: `0 0 6px ${AMBER}` }}
-        />
+        <div className="w-2 h-2 rounded-full" style={{ background: AMBER }} />
         <span
           className="text-xs font-semibold tracking-widest uppercase"
           style={{ color: MUTED }}

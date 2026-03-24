@@ -6,6 +6,9 @@ import ChatPanel from "./components/ChatPanel";
 import DecisionLog from "./components/DecisionLog";
 import FlightGauges from "./components/FlightGauges";
 import MissionStatus from "./components/MissionStatus";
+import PhaseChatPanel from "./components/PhaseChatPanel";
+import PilotCommsPanel from "./components/PilotCommsPanel";
+import RadarPanel from "./components/RadarPanel";
 import TopNav from "./components/TopNav";
 import { useActor } from "./hooks/useActor";
 import type {
@@ -47,7 +50,6 @@ export default function App() {
   const [systemAlerts, setSystemAlerts] = useState<SystemAlert[]>([]);
   const [sessionId, setSessionId] = useState<bigint | null>(null);
 
-  // Stable refs so effects don’t re-run on every value change
   const actorRef = useRef(actor);
   const sessionIdRef = useRef(sessionId);
   const prevCriticalCount = useRef(0);
@@ -62,7 +64,6 @@ export default function App() {
     sessionIdRef.current = sessionId;
   }, [sessionId]);
 
-  // ── Initial AI greeting ──────────────────────────────
   useEffect(() => {
     setChatMessages([
       {
@@ -75,7 +76,6 @@ export default function App() {
     ]);
   }, []);
 
-  // ── Backend: start / resume session ──────────────────
   useEffect(() => {
     if (!actor || sessionStarted.current) return;
     sessionStarted.current = true;
@@ -99,7 +99,6 @@ export default function App() {
     })();
   }, [actor]);
 
-  // ── AI Decision Engine ───────────────────────────────
   useEffect(() => {
     const { alerts, criticalMessage } = analyzeFlightParams(
       flightParams,
@@ -132,7 +131,6 @@ export default function App() {
     prevCriticalCount.current = critCount;
   }, [flightParams, flightPhase]);
 
-  // ── Param change handler ────────────────────────────
   const handleParamChange = useCallback(
     (key: keyof FlightParams, value: number) => {
       setFlightParams((prev) => ({ ...prev, [key]: value }));
@@ -140,7 +138,6 @@ export default function App() {
     [],
   );
 
-  // ── Phase change ───────────────────────────────────
   const handlePhaseChange = useCallback((phase: FlightPhase) => {
     setFlightPhase(phase);
     const sid = sessionIdRef.current;
@@ -148,7 +145,6 @@ export default function App() {
     if (sid && act) act.updateFlightPhase(sid, phase).catch(() => {});
   }, []);
 
-  // ── Send chat message ──────────────────────────────
   const handleSend = useCallback(
     (text: string) => {
       const pilotMsg: ChatMessage = {
@@ -205,35 +201,49 @@ export default function App() {
     >
       <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main
-        className="flex-1 overflow-hidden grid gap-3 p-3"
-        style={{ gridTemplateColumns: "260px 1fr 300px" }}
-      >
-        <aside className="flex flex-col gap-3 overflow-hidden min-w-0">
-          <MissionStatus
-            phase={flightPhase}
-            destination={destination}
-            weather={weather}
-            altitude={flightParams.altitude}
-            onPhaseChange={handlePhaseChange}
-            onDestinationChange={setDestination}
-            onWeatherChange={setWeather}
-          />
-          <AlertPanel alerts={systemAlerts} weather={weather} />
-        </aside>
+      {activeTab === "comms" ? (
+        <main className="flex-1 overflow-hidden flex">
+          <PilotCommsPanel actor={actor as any} />
+        </main>
+      ) : activeTab === "phase-chat" ? (
+        <main className="flex-1 overflow-hidden flex">
+          <PhaseChatPanel />
+        </main>
+      ) : activeTab === "radar" ? (
+        <main className="flex-1 overflow-hidden flex">
+          <RadarPanel />
+        </main>
+      ) : (
+        <main
+          className="flex-1 overflow-hidden grid gap-3 p-3"
+          style={{ gridTemplateColumns: "260px 1fr 300px" }}
+        >
+          <aside className="flex flex-col gap-3 overflow-hidden min-w-0">
+            <MissionStatus
+              phase={flightPhase}
+              destination={destination}
+              weather={weather}
+              altitude={flightParams.altitude}
+              onPhaseChange={handlePhaseChange}
+              onDestinationChange={setDestination}
+              onWeatherChange={setWeather}
+            />
+            <AlertPanel alerts={systemAlerts} weather={weather} />
+          </aside>
 
-        <section className="flex flex-col gap-3 overflow-hidden min-w-0">
-          <FlightGauges
-            params={flightParams}
-            onParamChange={handleParamChange}
-          />
-          <DecisionLog messages={chatMessages} />
-        </section>
+          <section className="flex flex-col gap-3 overflow-hidden min-w-0">
+            <FlightGauges
+              params={flightParams}
+              onParamChange={handleParamChange}
+            />
+            <DecisionLog messages={chatMessages} />
+          </section>
 
-        <aside className="flex flex-col overflow-hidden min-w-0">
-          <ChatPanel messages={chatMessages} onSend={handleSend} isOnline />
-        </aside>
-      </main>
+          <aside className="flex flex-col overflow-hidden min-w-0">
+            <ChatPanel messages={chatMessages} onSend={handleSend} isOnline />
+          </aside>
+        </main>
+      )}
 
       <footer
         className="flex items-center justify-between px-5 py-2 shrink-0 border-t text-[10px] font-mono"
@@ -247,10 +257,7 @@ export default function App() {
           <span className="flex items-center gap-1.5">
             <span
               className="w-1.5 h-1.5 rounded-full inline-block"
-              style={{
-                background: "oklch(83% 0.185 155)",
-                boxShadow: "0 0 4px oklch(83% 0.185 155)",
-              }}
+              style={{ background: "oklch(83% 0.185 155)" }}
             />
             SYSTEM NOMINAL
           </span>
